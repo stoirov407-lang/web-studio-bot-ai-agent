@@ -1,9 +1,9 @@
-Web Studio — сервер бота и API
+// Web Studio — сервер бота и API
 //
 // Что делает:
 // 1. Telegram-бот: /start присылает кнопку "Открыть студию" (Web App)
 // 2. /api/run: принимает заказ клиента и прогоняет его через 4 роли
-//    (Директор -> Дизайнер -> Разработчик -> Паблишер) через Claude API
+//    (Директор -> Дизайнер -> Разработчик -> Паблишер) через Gemini API
 // 3. Паблишер реально публикует готовый сайт на GitHub Pages и
 //    возвращает клиенту рабочую ссылку
 //
@@ -72,7 +72,7 @@ function parseJSON(text) {
 }
 
 async function callGemini(system, userPrompt, maxTokens = 2000) {
-  const model = "gemini-2.5-flash"; // бесплатная модель (Google AI Studio free tier)
+  const model = "gemini-2.5-flash";
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
   const res = await fetch(url, {
     method: "POST",
@@ -91,8 +91,6 @@ async function callGemini(system, userPrompt, maxTokens = 2000) {
   const parts = data?.candidates?.[0]?.content?.parts || [];
   return parts.map((p) => p.text || "").join("\n");
 }
-
-// ---------- Паблишер: реальная публикация на GitHub Pages ----------
 
 function slugify(str) {
   return (str || "site")
@@ -128,8 +126,6 @@ async function publishToGithubPages(html, businessName) {
   return { url, note: "Опубликовано на GitHub Pages." };
 }
 
-// ---------- API для мини-приложения ----------
-
 app.post("/api/run", async (req, res) => {
   try {
     const { order } = req.body;
@@ -159,8 +155,6 @@ app.post("/api/run", async (req, res) => {
 
 app.get("/health", (_req, res) => res.send("ok"));
 
-// ---------- Telegram-бот (webhook) ----------
-
 app.post("/telegram/webhook", async (req, res) => {
   const msg = req.body.message;
   if (msg?.text === "/start") {
@@ -179,10 +173,9 @@ app.post("/telegram/webhook", async (req, res) => {
   res.sendStatus(200);
 });
 
-// Регистрирует webhook у Telegram — вызвать один раз после деплоя
 app.get("/telegram/set-webhook", async (req, res) => {
   const publicUrl = `${req.protocol}://${req.get("host")}/telegram/webhook`;
-  const r = await fetch(`https://api.telegram.org/bot${8664681872:AAHydRQ20x8qkvH7F94PrxFyiPeOaWuyXrg}/setWebhook?url=${encodeURIComponent(publicUrl)}`);
+  const r = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook?url=${encodeURIComponent(publicUrl)}`);
   res.json(await r.json());
 });
 
