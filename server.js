@@ -6,15 +6,6 @@
 //    (Директор -> Дизайнер -> Разработчик -> Паблишер) через Gemini API
 // 3. Паблишер реально публикует готовый сайт на GitHub Pages и
 //    возвращает клиенту рабочую ссылку
-//
-// Нужные переменные окружения (задаются на хостинге, не в коде):
-//   GEMINI_API_KEY      — бесплатный ключ Gemini API (aistudio.google.com/apikey)
-//   TELEGRAM_BOT_TOKEN  — токен бота от @BotFather
-//   MINI_APP_URL        — публичный URL фронтенда (GitHub Pages), см. frontend/
-//   GITHUB_TOKEN        — Personal Access Token с правом "repo" (для публикации сайтов)
-//   GITHUB_OWNER        — твой логин на GitHub
-//   GITHUB_PAGES_REPO   — имя репозитория, в котором включён GitHub Pages
-//   PORT                — порт (хостинг обычно подставляет сам)
 
 import express from "express";
 
@@ -28,6 +19,7 @@ const {
   PORT = 3000,
 } = process.env;
 
+const app = express();
 app.set("trust proxy", 1);
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
@@ -37,8 +29,6 @@ app.use((req, res, next) => {
   next();
 });
 app.use(express.json({ limit: "2mb" }));
-
-// ---------- Роли агентов ----------
 
 const DIRECTOR_SYSTEM = `Ты — креативный директор AI-студии. К тебе поступает свободный текст заказа от клиента на создание сайта. Разбери его в чёткое техническое задание. Отвечай СТРОГО валидным JSON без markdown-обёртки, на языке заказа клиента:
 {
