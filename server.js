@@ -182,7 +182,7 @@ app.post("/telegram/webhook", async (req, res) => {
 // Регистрирует webhook у Telegram — вызвать один раз после деплоя
 app.get("/telegram/set-webhook", async (req, res) => {
   const publicUrl = `${req.protocol}://${req.get("host")}/telegram/webhook`;
-  const r = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook?url=${encodeURIComponent(publicUrl)}`);
+  const r = await fetch(`https://api.telegram.org/bot${8664681872:AAHydRQ20x8qkvH7F94PrxFyiPeOaWuyXrg}/setWebhook?url=${encodeURIComponent(publicUrl)}`);
   res.json(await r.json());
 });
 
