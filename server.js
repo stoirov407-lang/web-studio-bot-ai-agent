@@ -1,11 +1,5 @@
+
 // Web Studio — сервер бота и API
-//
-// Что делает:
-// 1. Telegram-бот: /start присылает кнопку "Открыть студию" (Web App)
-// 2. /api/run: принимает заказ клиента и прогоняет его через 4 роли
-//    (Директор -> Дизайнер -> Разработчик -> Паблишер) через Gemini API
-// 3. Паблишер реально публикует готовый сайт на GitHub Pages и
-//    возвращает клиенту рабочую ссылку
 
 import express from "express";
 
@@ -68,9 +62,14 @@ function parseJSON(text) {
   }
 }
 
-async function callGemini(system, userPrompt, maxTokens = 2000) {
+async function callGemini(system, userPrompt, maxTokens = 2000, jsonMode = false) {
   const model = "gemini-2.5-flash";
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+  const generationConfig = {
+    maxOutputTokens: maxTokens,
+    thinkingConfig: { thinkingBudget: 0 },
+  };
+  if (jsonMode) generationConfig.responseMimeType = "application/json";
   const res = await fetch(url, {
     method: "POST",
     headers: {
@@ -80,7 +79,7 @@ async function callGemini(system, userPrompt, maxTokens = 2000) {
     body: JSON.stringify({
       system_instruction: { parts: [{ text: system }] },
       contents: [{ role: "user", parts: [{ text: userPrompt }] }],
-      generationConfig: { maxOutputTokens: maxTokens },
+      generationConfig,
     }),
   });
   if (!res.ok) throw new Error(`Gemini API ${res.status}: ${await res.text()}`);
@@ -128,20 +127,20 @@ app.post("/api/run", async (req, res) => {
     const { order } = req.body;
     if (!order || !order.trim()) return res.status(400).json({ error: "Пустой заказ" });
 
-    const briefRaw = await callGemini(DIRECTOR_SYSTEM, order, 1000);
+    const briefRaw = await callGemini(DIRECTOR_SYSTEM, order, 1500, true);
     const brief = parseJSON(briefRaw);
     if (!brief) throw new Error("Директор вернул некорректный формат брифа");
 
-    const designRaw = await callGemini(DESIGNER_SYSTEM, JSON.stringify(brief), 800);
+    const designRaw = await callGemini(DESIGNER_SYSTEM, JSON.stringify(brief), 1500, true);
     const design = parseJSON(designRaw);
     if (!design) throw new Error("Дизайнер вернул некорректный формат концепции");
 
-    const htmlRaw = await callGemini(DEVELOPER_SYSTEM, JSON.stringify({ brief, design }), 6000);
+    const htmlRaw = await callGemini(DEVELOPER_SYSTEM, JSON.stringify({ brief, design }), 8000);
     const html = stripFences(htmlRaw);
 
     const publish = await publishToGithubPages(html, brief.business_name);
 
-    const message = (await callGemini(PUBLISHER_SYSTEM, JSON.stringify({ brief, url: publish.url }), 400)).trim();
+    const message = (await callGemini(PUBLISHER_SYSTEM, JSON.stringify({ brief, url: publish.url }), 600)).trim();
 
     res.json({ brief, design, html, message, publishedUrl: publish.url, publishNote: publish.note });
   } catch (e) {
